@@ -1,10 +1,18 @@
 from flask import Flask, render_template_string
+from datetime import datetime
+import socket
+import uuid
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    # HTML code written directly in the flask app without images
+    # Get system information
+    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    system_id = str(uuid.uuid4())
+    private_ip = socket.gethostbyname(socket.gethostname())
+    
+    # HTML template with variables
     html_content = '''
     <!DOCTYPE html>
 <html lang="en">
@@ -70,7 +78,7 @@ def home():
 <body>
 
     <!-- Careers Link -->
-    <a href="{{ url_for('careers.careers') }}" class="nav-link">Careers</a>
+    <a href="#" class="nav-link">Careers</a>
 
     <h1>Welcome to Thinknyx Technologies!</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
@@ -104,11 +112,10 @@ def home():
 </body>
 </html>
 '''
-# Render the HTML content
-return render_template_string(html_content) # type: ignore
+    return render_template_string(html_content, 
+                               current_date=current_date,
+                               system_id=system_id,
+                               private_ip=private_ip)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
-
-    
-    
