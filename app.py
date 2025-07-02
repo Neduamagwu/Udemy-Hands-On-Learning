@@ -25,7 +25,7 @@ def home():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Thinknyx Technologies</title>
+    <title>Welcome to Polypop Nigeria Limited>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -90,7 +90,7 @@ def home():
     <!-- Updated Careers Link - Now points to /careers -->
     <a href="/careers" class="nav-link">Careers</a>
 
-    <h1>Welcome to Thinknyx Technologies!</h1>
+    <h1>Welcome to Polypop Nigeria Limited</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
 
     <div class="services">
@@ -109,7 +109,7 @@ def home():
     </div>
 
     <footer>
-        <p>From Thinknyx Technologies</p>
+        <p>From Polypop Nigeria Limited</p>
     </footer>
 
     <!-- Display current date, unique system ID, and private IP -->
@@ -135,8 +135,8 @@ def careers():
         phone = request.form.get('phone')
         experience = request.form.get('experience')
         position = request.form.get('position')
-        ctc = request.form.get('ctc')
-        expected_ctc = request.form.get('expected_ctc')
+        salary = request.form.get('salary')
+        expected_salary = request.form.get('expected_salary')
         
         # Handle file upload
         if 'file' in request.files:
@@ -178,7 +178,7 @@ def careers():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Careers - Thinknyx Technologies</title>
+    <title>Careers - Polypop Nigeria Limited</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -267,7 +267,7 @@ def careers():
     <!-- Add link back to home -->
     <a href="/" class="nav-link">Home</a>
 
-    <h1>Careers at Thinknyx Technologies</h1>
+    <h1>Careers at Polypop Nigeria Limited</h1>
     <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
 
     <!-- File Upload Form -->
@@ -298,13 +298,13 @@ def careers():
         </div>
 
         <div class="form-group">
-            <label for="ctc">Current CTC:</label>
-            <input type="number" name="ctc" id="ctc" required placeholder="Enter your current CTC">
+            <label for="salary">Current CTC:</label>
+            <input type="number" name="salary" id="salary" required placeholder="Enter your current Salary">
         </div>
 
         <div class="form-group">
-            <label for="expected_ctc">Expected CTC:</label>
-            <input type="number" name="expected_ctc" id="expected_ctc" required placeholder="Enter your expected CTC">
+            <label for="expected_salary>Expected Salary:</label>
+            <input type="number" name="expected_salary" id="expected_salary" required placeholder="Enter your expected Salary">
         </div>
 
         <!-- File Upload Section -->
@@ -319,7 +319,7 @@ def careers():
     </form>
 
     <footer>
-        <p>From Thinknyx Technologies</p>
+        <p>From Polypop Nigeria Limited</p>
     </footer>
 </body>
 </html>
