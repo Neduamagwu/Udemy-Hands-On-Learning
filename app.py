@@ -25,7 +25,7 @@ def home():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Polypop Nigeria Limited>
+    <title>Welcome to Polypop Nigeria Limited</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -86,10 +86,7 @@ def home():
     </style>
 </head>
 <body>
-
-    <!-- Updated Careers Link - Now points to /careers -->
     <a href="/careers" class="nav-link">Careers</a>
-
     <h1>Welcome to Polypop Nigeria Limited</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
 
@@ -112,13 +109,11 @@ def home():
         <p>From Polypop Nigeria Limited</p>
     </footer>
 
-    <!-- Display current date, unique system ID, and private IP -->
     <div class="system-info">
         <p><strong>Current Date:</strong> {{ current_date }}</p>
         <p><strong>System ID:</strong> {{ system_id }}</p>
         <p><strong>Private IP:</strong> {{ private_ip }}</p>
     </div>
-
 </body>
 </html>
 '''
@@ -142,14 +137,11 @@ def careers():
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                # Save the file with a unique name
                 filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         
-        # In a real app, you would save this data to a database
         print(f"New application received from {name} for {position} position")
         
-        # Show confirmation page
         return f'''
         <!DOCTYPE html>
         <html>
@@ -171,7 +163,6 @@ def careers():
         </html>
         '''
     
-    # For GET requests, show the careers page
     careers_html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -264,16 +255,11 @@ def careers():
     </style>
 </head>
 <body>
-    <!-- Add link back to home -->
     <a href="/" class="nav-link">Home</a>
-
     <h1>Careers at Polypop Nigeria Limited</h1>
     <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
 
-    <!-- File Upload Form -->
     <form method="POST" enctype="multipart/form-data" class="upload-form">
-
-        <!-- Personal Information Section -->
         <div class="section-title">Personal Information</div>
         <div class="form-group">
             <label for="name">Your Name:</label>
@@ -285,10 +271,9 @@ def careers():
             <input type="tel" name="phone" id="phone" required placeholder="Enter your phone number">
         </div>
 
-        <!-- Professional Information Section -->
         <div class="section-title">Professional Information</div>
         <div class="form-group">
-            <label for="experience">Year of Experience:</label>
+            <label for="experience">Years of Experience:</label>
             <input type="number" name="experience" id="experience" required>
         </div>
 
@@ -298,23 +283,21 @@ def careers():
         </div>
 
         <div class="form-group">
-            <label for="salary">Current CTC:</label>
-            <input type="number" name="salary" id="salary" required placeholder="Enter your current Salary">
+            <label for="salary">Current Salary:</label>
+            <input type="number" name="salary" id="salary" required placeholder="Enter your current salary">
         </div>
 
         <div class="form-group">
-            <label for="expected_salary>Expected Salary:</label>
-            <input type="number" name="expected_salary" id="expected_salary" required placeholder="Enter your expected Salary">
+            <label for="expected_salary">Expected Salary:</label>
+            <input type="number" name="expected_salary" id="expected_salary" required placeholder="Enter your expected salary">
         </div>
 
-        <!-- File Upload Section -->
         <div class="section-title">Upload Your Resume</div>
         <div class="form-group">
             <label for="file">Choose a file to upload:</label>
             <input type="file" name="file" id="file" required>
         </div>
 
-        <!-- Submit Button -->
         <button type="submit">Submit Application</button>
     </form>
 
