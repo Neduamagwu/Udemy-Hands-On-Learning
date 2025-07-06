@@ -3,22 +3,26 @@ from datetime import datetime
 import socket
 import uuid
 import os
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
 
 app = Flask(__name__)
 
-# Create uploads directory if it doesn't exist
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# S3 Configuration
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')  # <-- Replace with your actual S3 bucket name
+S3_REGION = os.getenv('AWS_REGION')
+
+# Initialize Boto3 S3 client
+s3_client = boto3.client('s3', S3_REGION=os.getenv('AWS_REGION')
+)
+
 
 @app.route('/')
 def home():
-    # Get system information
     current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     system_id = str(uuid.uuid4())
     private_ip = socket.gethostbyname(socket.gethostname())
-    
-    # HTML template with variables
+
     html_content = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -117,31 +121,43 @@ def home():
 </body>
 </html>
 '''
-    return render_template_string(html_content, 
-                               current_date=current_date,
-                               system_id=system_id,
-                               private_ip=private_ip)
+    return render_template_string(html_content,
+                                  current_date=current_date,
+                                  system_id=system_id,
+                                  private_ip=private_ip), 200
+
 
 @app.route('/careers', methods=['GET', 'POST'])
 def careers():
     if request.method == 'POST':
-        # Handle form submission
         name = request.form.get('name')
         phone = request.form.get('phone')
         experience = request.form.get('experience')
         position = request.form.get('position')
         salary = request.form.get('salary')
         expected_salary = request.form.get('expected_salary')
-        
-        # Handle file upload
-        if 'file' in request.files:
-            file = request.files['file']
-            if file.filename != '':
-                filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
+
+        if 'file' not in request.files:
+            return "Resume file is missing in the request.", 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return "No file selected for upload.", 400
+
+        filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
+        try:
+            s3_client.upload_fileobj(
+                file,
+                S3_BUCKET_NAME,
+                filename,
+                ExtraArgs={'ACL': 'private'}
+            )
+            print(f"File uploaded to S3 bucket: {filename}")
+        except (NoCredentialsError, ClientError) as e:
+            return f"Error uploading file to S3: {str(e)}", 500
+
         print(f"New application received from {name} for {position} position")
-        
+
         return f'''
         <!DOCTYPE html>
         <html>
@@ -161,8 +177,8 @@ def careers():
             <a href="/">Return to Home Page</a>
         </body>
         </html>
-        '''
-    
+        ''', 201
+
     careers_html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -307,7 +323,8 @@ def careers():
 </body>
 </html>
 '''
-    return render_template_string(careers_html)
+    return render_template_string(careers_html), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
