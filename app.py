@@ -13,9 +13,7 @@ S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')  # <-- Replace with your actual S3 
 S3_REGION = os.getenv('AWS_REGION')
 
 # Initialize Boto3 S3 client
-s3_client = boto3.client('s3', S3_REGION=os.getenv('AWS_REGION')
-)
-
+s3_client = boto3.client('s3', region_name=S3_REGION)
 
 @app.route('/')
 def home():
