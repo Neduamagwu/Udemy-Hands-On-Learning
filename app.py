@@ -7,11 +7,6 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 
 app = Flask(__name__)
-
-# AWS S3 Configuration
-S3_BUCKET = 'your-bucket-name'  # Replace with your bucket name
-S3_REGION = 'us-east-2'  # Replace if different
-
 # Initialize S3 client
 s3_client = boto3.client('s3', region_name=S3_REGION)
 
