@@ -130,6 +130,8 @@ def home():
 @app.route('/careers', methods=['GET', 'POST'])
 def careers():
     if request.method == 'POST':
+        print(">>> [INFO] Received POST to /careers")
+
         name = request.form.get('name')
         phone = request.form.get('phone')
         experience = request.form.get('experience')
@@ -137,11 +139,15 @@ def careers():
         salary = request.form.get('salary')
         expected_salary = request.form.get('expected_salary')
 
+        print(f">>> [INFO] Applicant: {name}, Position: {position}")
+
         if 'file' not in request.files:
+            print(">>> [ERROR] No file part in request")
             return "Resume file is missing in the request.", 400
 
         file = request.files['file']
         if file.filename == '':
+            print(">>> [ERROR] File name is empty")
             return "No file selected for upload.", 400
 
         filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
@@ -152,11 +158,12 @@ def careers():
                 filename,
                 ExtraArgs={'ACL': 'private'}
             )
-            print(f"File uploaded to S3 bucket: {filename}")
-        except (NoCredentialsError, ClientError) as e:
+            print(f">>> [SUCCESS] File uploaded to S3 bucket: {filename}")
+        except Exception as e:
+            print(f">>> [ERROR] Upload to S3 failed: {str(e)}")
             return f"Error uploading file to S3: {str(e)}", 500
 
-        print(f"New application received from {name} for {position} position")
+        print(f">>> [INFO] New application received from {name} for {position} position")
 
         return f'''
         <!DOCTYPE html>
