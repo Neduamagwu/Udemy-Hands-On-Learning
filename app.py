@@ -3,13 +3,17 @@ from datetime import datetime
 import socket
 import uuid
 import os
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 app = Flask(__name__)
 
-# Create uploads directory if it doesn't exist
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# AWS S3 Configuration
+S3_BUCKET = 'your-bucket-name'  # Replace with your bucket name
+S3_REGION = 'us-east-2'  # Replace if different
+
+# Initialize S3 client
+s3_client = boto3.client('s3', region_name=S3_REGION)
 
 @app.route('/')
 def home():
@@ -18,7 +22,7 @@ def home():
     system_id = str(uuid.uuid4())
     private_ip = socket.gethostbyname(socket.gethostname())
     
-    # HTML template with variables
+    # HTML template with variables (same as before)
     html_content = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -122,6 +126,38 @@ def home():
                                system_id=system_id,
                                private_ip=private_ip)
 
+def upload_file_to_s3(file, bucket_name, acl="private"):
+    """
+    Upload a file to an S3 bucket
+    :param file: File to upload
+    :param bucket_name: Bucket to upload to
+    :param acl: ACL permissions (default is private)
+    :return: True if file was uploaded, else False
+    """
+    try:
+        # Generate a unique filename
+        filename = f"{request.form.get('name').replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
+        
+        s3_client.upload_fileobj(
+            file,
+            bucket_name,
+            filename,
+            ExtraArgs={
+                "ACL": acl,
+                "ContentType": file.content_type
+            }
+        )
+        
+        # Generate the URL to access the file
+        url = f"https://{bucket_name}.s3.{S3_REGION}.amazonaws.com/{filename}"
+        return url
+    except NoCredentialsError:
+        print("Credentials not available")
+        return False
+    except Exception as e:
+        print(f"Error uploading to S3: {e}")
+        return False
+
 @app.route('/careers', methods=['GET', 'POST'])
 def careers():
     if request.method == 'POST':
@@ -133,12 +169,16 @@ def careers():
         salary = request.form.get('salary')
         expected_salary = request.form.get('expected_salary')
         
-        # Handle file upload
+        # Handle file upload to S3
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                # Upload to S3
+                s3_url = upload_file_to_s3(file, S3_BUCKET)
+                if s3_url:
+                    print(f"File uploaded successfully to: {s3_url}")
+                else:
+                    print("Failed to upload file to S3")
         
         print(f"New application received from {name} for {position} position")
         
