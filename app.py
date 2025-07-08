@@ -3,13 +3,13 @@ from datetime import datetime
 import socket
 import uuid
 import os
-import boto3
-from botocore.exceptions import NoCredentialsError
 
 app = Flask(__name__)
-# Initialize S3 client
-s3_client = boto3.client('s3', region_name=os.getenv('AWS_REGION'))
 
+# Create uploads directory if it doesn't exist
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def home():
@@ -18,14 +18,14 @@ def home():
     system_id = str(uuid.uuid4())
     private_ip = socket.gethostbyname(socket.gethostname())
     
-    # HTML template with variables (same as before)
+    # HTML template with variables
     html_content = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Polypop Nigeria Limited</title>
+    <title>Welcome to Thinknyx Technologies</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -86,8 +86,11 @@ def home():
     </style>
 </head>
 <body>
+
+    <!-- Updated Careers Link - Now points to /careers -->
     <a href="/careers" class="nav-link">Careers</a>
-    <h1>Welcome to Polypop Nigeria Limited</h1>
+
+    <h1>Welcome to Thinknyx Technologies!</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
 
     <div class="services">
@@ -106,14 +109,16 @@ def home():
     </div>
 
     <footer>
-        <p>From Polypop Nigeria Limited</p>
+        <p>From Thinknyx Technologies</p>
     </footer>
 
+    <!-- Display current date, unique system ID, and private IP -->
     <div class="system-info">
         <p><strong>Current Date:</strong> {{ current_date }}</p>
         <p><strong>System ID:</strong> {{ system_id }}</p>
         <p><strong>Private IP:</strong> {{ private_ip }}</p>
     </div>
+
 </body>
 </html>
 '''
@@ -121,44 +126,6 @@ def home():
                                current_date=current_date,
                                system_id=system_id,
                                private_ip=private_ip)
-
-def upload_file_to_s3(file, acl="public-read"):
-    """
-    Upload a file to an S3 bucket.
-    :param file: File to upload
-    :param acl: ACL permissions (default is public-read)
-    :return: URL of the uploaded file
-    """
-    try:
-        # Retrieve the bucket name and region from environment variables
-        bucket_name = os.getenv('S3_BUCKET_NAME')
-        s3_region = os.getenv('AWS_REGION')
-
-        if not bucket_name or not s3_region:
-            raise ValueError("Bucket name or region not set in environment variables.")
-
-        # Generate a unique filename
-        filename = f"{request.form.get('name').replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
-
-        # Upload the file to S3
-        s3_client.upload_fileobj(
-            file,
-            bucket_name,
-            filename,
-            ExtraArgs={"ACL": acl, "ContentType": file.content_type}
-        )
-
-        # Generate the URL to access the file
-        url = f"https://{bucket_name}.s3.{s3_region}.amazonaws.com/{filename}"
-        return url
-
-    except NoCredentialsError:
-        print("Credentials not available")
-        return False
-    except Exception as e:
-        print(f"Error uploading to S3: {e}")
-        return False
-
 
 @app.route('/careers', methods=['GET', 'POST'])
 def careers():
@@ -168,22 +135,21 @@ def careers():
         phone = request.form.get('phone')
         experience = request.form.get('experience')
         position = request.form.get('position')
-        salary = request.form.get('salary')
-        expected_salary = request.form.get('expected_salary')
-
-        # Handle file upload to S3
+        ctc = request.form.get('ctc')
+        expected_ctc = request.form.get('expected_ctc')
+        
+        # Handle file upload
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                # Upload to S3
-                s3_url = upload_file_to_s3(file)
-                if s3_url:
-                    print(f"File uploaded successfully to: {s3_url}")
-                else:
-                    print("Failed to upload file to S3")
+                # Save the file with a unique name
+                filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         
+        # In a real app, you would save this data to a database
         print(f"New application received from {name} for {position} position")
-
+        
+        # Show confirmation page
         return f'''
         <!DOCTYPE html>
         <html>
@@ -205,13 +171,14 @@ def careers():
         </html>
         '''
     
+    # For GET requests, show the careers page
     careers_html = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Careers - Polypop Nigeria Limited</title>
+    <title>Careers - Thinknyx Technologies</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -297,11 +264,16 @@ def careers():
     </style>
 </head>
 <body>
+    <!-- Add link back to home -->
     <a href="/" class="nav-link">Home</a>
-    <h1>Careers at Polypop Nigeria Limited</h1>
+
+    <h1>Careers at Thinknyx Technologies</h1>
     <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
 
+    <!-- File Upload Form -->
     <form method="POST" enctype="multipart/form-data" class="upload-form">
+
+        <!-- Personal Information Section -->
         <div class="section-title">Personal Information</div>
         <div class="form-group">
             <label for="name">Your Name:</label>
@@ -313,9 +285,10 @@ def careers():
             <input type="tel" name="phone" id="phone" required placeholder="Enter your phone number">
         </div>
 
+        <!-- Professional Information Section -->
         <div class="section-title">Professional Information</div>
         <div class="form-group">
-            <label for="experience">Years of Experience:</label>
+            <label for="experience">Year of Experience:</label>
             <input type="number" name="experience" id="experience" required>
         </div>
 
@@ -325,32 +298,33 @@ def careers():
         </div>
 
         <div class="form-group">
-            <label for="salary">Current Salary:</label>
-            <input type="number" name="salary" id="salary" required placeholder="Enter your current salary">
+            <label for="ctc">Current CTC:</label>
+            <input type="number" name="ctc" id="ctc" required placeholder="Enter your current CTC">
         </div>
 
         <div class="form-group">
-            <label for="expected_salary">Expected Salary:</label>
-            <input type="number" name="expected_salary" id="expected_salary" required placeholder="Enter your expected salary">
+            <label for="expected_ctc">Expected CTC:</label>
+            <input type="number" name="expected_ctc" id="expected_ctc" required placeholder="Enter your expected CTC">
         </div>
 
+        <!-- File Upload Section -->
         <div class="section-title">Upload Your Resume</div>
         <div class="form-group">
             <label for="file">Choose a file to upload:</label>
             <input type="file" name="file" id="file" required>
         </div>
 
+        <!-- Submit Button -->
         <button type="submit">Submit Application</button>
     </form>
 
     <footer>
-        <p>From Polypop Nigeria Limited</p>
+        <p>From Thinknyx Technologies</p>
     </footer>
 </body>
 </html>
 '''
     return render_template_string(careers_html)
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
