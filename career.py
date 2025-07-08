@@ -46,16 +46,24 @@ def careers():
         s3_folder = f"{current_date}/{file_name}"
 
         try:
+            # Debugging - Check if we are hitting this point
+            print(f"Attempting to upload file to: {s3_folder} in bucket: {S3_BUCKET_NAME}")
+            
             # Upload file to S3 within the folder structure
             s3_client.upload_fileobj(file, S3_BUCKET_NAME, s3_folder)
+            
+            # Debugging - Check if the upload succeeded
+            print(f"File uploaded successfully: {s3_folder}")
 
-            # Return success message 
-            return f"file '{filename}' uploaded successfully to s3 folder '{current_date}'"
-        
+            # Return success message
+            return f"File '{file_name}' uploaded successfully to S3 folder '{current_date}'"
+
         except NoCredentialsError:
+            print("Error: Credentials not available")
             return "Credentials not available", 400
         except Exception as e:
-            return f"An error occured: {str(e)}", 500
+            print(f"Error: {str(e)}")
+            return f"An error occurred: {str(e)}", 500
         
-            # Render the career page template 
+        # Render the careers page template
         return render_template('careers.html')
