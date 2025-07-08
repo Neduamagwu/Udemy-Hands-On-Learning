@@ -1,14 +1,16 @@
 from flask import Flask, render_template_string, request
+from werkzeug.utils import secure_filename
 from datetime import datetime
 import socket
 import uuid
 import os
-import boto3
-from botocore.exceptions import NoCredentialsError
 
 app = Flask(__name__)
-# Initialize S3 client
-s3_client = boto3.client('s3', region_name=S3_REGION)
+
+# Create uploads directory if it doesn't exist
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def home():
@@ -16,8 +18,8 @@ def home():
     current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     system_id = str(uuid.uuid4())
     private_ip = socket.gethostbyname(socket.gethostname())
-    
-    # HTML template with variables (same as before)
+
+    # HTML template with variables
     html_content = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -86,7 +88,7 @@ def home():
 </head>
 <body>
     <a href="/careers" class="nav-link">Careers</a>
-    <h1>Welcome to Polypop Nigeria Limited</h1>
+    <h1>Welcome to Polypop Nigeria Limited!</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
 
     <div class="services">
@@ -116,88 +118,111 @@ def home():
 </body>
 </html>
 '''
-    return render_template_string(html_content, 
+    return render_template_string(html_content,
                                current_date=current_date,
                                system_id=system_id,
                                private_ip=private_ip)
-
-def upload_file_to_s3(file, bucket_name, acl="private"):
-    """
-    Upload a file to an S3 bucket
-    :param file: File to upload
-    :param bucket_name: Bucket to upload to
-    :param acl: ACL permissions (default is private)
-    :return: True if file was uploaded, else False
-    """
-    try:
-        # Generate a unique filename
-        filename = f"{request.form.get('name').replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
-        
-        s3_client.upload_fileobj(
-            file,
-            bucket_name,
-            filename,
-            ExtraArgs={
-                "ACL": acl,
-                "ContentType": file.content_type
-            }
-        )
-        
-        # Generate the URL to access the file
-        url = f"https://{bucket_name}.s3.{S3_REGION}.amazonaws.com/{filename}"
-        return url
-    except NoCredentialsError:
-        print("Credentials not available")
-        return False
-    except Exception as e:
-        print(f"Error uploading to S3: {e}")
-        return False
 
 @app.route('/careers', methods=['GET', 'POST'])
 def careers():
     if request.method == 'POST':
         # Handle form submission
         name = request.form.get('name')
-        phone = request.form.get('phone')
-        experience = request.form.get('experience')
-        position = request.form.get('position')
-        salary = request.form.get('salary')
-        expected_salary = request.form.get('expected_salary')
-        
-        # Handle file upload to S3
+        filename = None
+
+        # Handle file upload
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                # Upload to S3
-                s3_url = upload_file_to_s3(file, S3_BUCKET)
-                if s3_url:
-                    print(f"File uploaded successfully to: {s3_url}")
-                else:
-                    print("Failed to upload file to S3")
-        
-        print(f"New application received from {name} for {position} position")
-        
-        return f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Application Submitted</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
-                h1 {{ color: #4CAF50; }}
-                a {{ color: #4CAF50; text-decoration: none; }}
-                a:hover {{ text-decoration: underline; }}
-            </style>
-        </head>
-        <body>
-            <h1>Application Submitted Successfully!</h1>
-            <p>Thank you for your application, {name}.</p>
-            <p>We have received your application for the {position} position.</p>
-            <a href="/">Return to Home Page</a>
-        </body>
-        </html>
+                # Get file extension from original filename
+                file_ext = os.path.splitext(file.filename)[1].lower()
+                # Create filename using the entered name and original extension
+                base_filename = f"{name.replace(' ', '_')}{file_ext}"
+                # Secure the filename
+                filename = secure_filename(base_filename)
+                # Save the file
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                print(f"File saved as: {filename}")
+
+        # Show confirmation page
+        confirmation_html = f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application Submitted</title>
+    <style>
+        body {{ 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }}
+        .confirmation-container {{
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }}
+        h1 {{ 
+            color: #4CAF50; 
+            margin-bottom: 20px;
+        }}
+        .file-info {{
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+        }}
+        a {{ 
+            color: #4CAF50; 
+            text-decoration: none;
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 20px;
+            border: 1px solid #4CAF50;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }}
+        a:hover {{
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+        }}
+    </style>
+</head>
+<body>
+    <div class="confirmation-container">
+        <h1>Application Submitted Successfully!</h1>
+        <p>Thank you for your application, <strong>{name}</strong>.</p>
         '''
-    
+        
+        if filename:
+            confirmation_html += f'''
+        <p>We have received your resume:</p>
+        <div class="file-info">{filename}</div>
+        '''
+        else:
+            confirmation_html += '''
+        <p>We have received your application.</p>
+        '''
+            
+        confirmation_html += '''
+        <a href="/">Return to Home Page</a>
+    </div>
+</body>
+</html>
+        '''
+        return confirmation_html
+
+    # For GET requests, show the careers page
     careers_html = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -208,48 +233,63 @@ def careers():
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
             background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
         h1 {
             color: #4CAF50;
+            margin-bottom: 20px;
         }
         .upload-form {
-            margin-top: 30px;
             background-color: #fff;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            display: inline-block;
             width: 100%;
             max-width: 600px;
-            text-align: left;
+            text-align: center;
         }
         .form-group {
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
         }
         .form-group label {
             font-size: 14px;
             font-weight: bold;
-            width: 200px;
-            text-align: right;
-            margin-right: 20px;
+            display: block;
+            margin-bottom: 8px;
         }
         .form-group input {
             width: 100%;
+            max-width: 400px;
             padding: 10px;
             font-size: 14px;
             border-radius: 5px;
             border: 1px solid #ddd;
             box-sizing: border-box;
+            margin: 0 auto;
         }
         .form-group input[type="file"] {
             border: none;
             padding: 5px;
+            margin: 0 auto;
+            display: block;
+        }
+        .file-info {
+            font-size: 14px;
+            color: #777;
+            margin-top: 5px;
         }
         button {
             background-color: #4CAF50;
@@ -260,85 +300,69 @@ def careers():
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
+            max-width: 400px;
             box-sizing: border-box;
+            margin: 0 auto;
+            display: block;
         }
         button:hover {
             background-color: #45a049;
         }
         footer {
-            margin-top: 50px;
+            text-align: center;
+            padding: 20px;
             font-size: 14px;
             color: #777;
+            width: 100%;
         }
-        .section-title {
-            font-size: 20px;
-            color: #4CAF50;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .nav-link {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 16px;
-            color: #4CAF50;
-            text-decoration: none;
-        }
-        .nav-link:hover {
-            text-decoration: underline;
+        .requirements {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <a href="/" class="nav-link">Home</a>
-    <h1>Careers at Polypop Nigeria Limited</h1>
-    <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
+    <div class="container">
+        <div class="upload-form">
+            <h1>Careers at Polypop Nigeria Limited</h1>
+            <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
 
-    <form method="POST" enctype="multipart/form-data" class="upload-form">
-        <div class="section-title">Personal Information</div>
-        <div class="form-group">
-            <label for="name">Your Name:</label>
-            <input type="text" name="name" id="name" required>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="name">Your Full Name:</label>
+                    <input type="text" name="name" id="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="file">Upload Your Resume:</label>
+                    <input type="file" name="file" id="file" required accept=".pdf,.doc,.docx">
+                    <p class="file-info" id="file-info">No file chosen</p>
+                    <p class="requirements">Accepted formats: PDF, DOC, DOCX</p>
+                </div>
+
+                <button type="submit">Submit Application</button>
+            </form>
         </div>
-
-        <div class="form-group">
-            <label for="phone">Phone Number:</label>
-            <input type="tel" name="phone" id="phone" required placeholder="Enter your phone number">
-        </div>
-
-        <div class="section-title">Professional Information</div>
-        <div class="form-group">
-            <label for="experience">Years of Experience:</label>
-            <input type="number" name="experience" id="experience" required>
-        </div>
-
-        <div class="form-group">
-            <label for="position">Position Applying For:</label>
-            <input type="text" name="position" id="position" required>
-        </div>
-
-        <div class="form-group">
-            <label for="salary">Current Salary:</label>
-            <input type="number" name="salary" id="salary" required placeholder="Enter your current salary">
-        </div>
-
-        <div class="form-group">
-            <label for="expected_salary">Expected Salary:</label>
-            <input type="number" name="expected_salary" id="expected_salary" required placeholder="Enter your expected salary">
-        </div>
-
-        <div class="section-title">Upload Your Resume</div>
-        <div class="form-group">
-            <label for="file">Choose a file to upload:</label>
-            <input type="file" name="file" id="file" required>
-        </div>
-
-        <button type="submit">Submit Application</button>
-    </form>
+    </div>
 
     <footer>
         <p>From Polypop Nigeria Limited</p>
     </footer>
+
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileInfo = document.getElementById('file-info');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const fileName = fileInput.files[0].name;
+                fileInfo.textContent = `Selected file: ${fileName}`;
+            } else {
+                fileInfo.textContent = 'No file chosen';
+            }
+        });
+    </script>
 </body>
 </html>
 '''
