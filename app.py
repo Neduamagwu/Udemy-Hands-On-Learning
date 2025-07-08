@@ -1,4 +1,5 @@
 from flask import Flask, render_template_string, request
+from werkzeug.utils import secure_filename
 from datetime import datetime
 import socket
 import uuid
@@ -17,7 +18,7 @@ def home():
     current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     system_id = str(uuid.uuid4())
     private_ip = socket.gethostbyname(socket.gethostname())
-    
+
     # HTML template with variables
     html_content = '''
 <!DOCTYPE html>
@@ -25,7 +26,7 @@ def home():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Thinknyx Technologies</title>
+    <title>Welcome to Polypop Nigeria Limited</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -86,11 +87,8 @@ def home():
     </style>
 </head>
 <body>
-
-    <!-- Updated Careers Link - Now points to /careers -->
     <a href="/careers" class="nav-link">Careers</a>
-
-    <h1>Welcome to Thinknyx Technologies!</h1>
+    <h1>Welcome to Polypop Nigeria Limited!</h1>
     <p>We specialize in providing innovative solutions to make your business thrive. Explore our services below:</p>
 
     <div class="services">
@@ -109,20 +107,18 @@ def home():
     </div>
 
     <footer>
-        <p>From Thinknyx Technologies</p>
+        <p>From Polypop Nigeria Limited</p>
     </footer>
 
-    <!-- Display current date, unique system ID, and private IP -->
     <div class="system-info">
         <p><strong>Current Date:</strong> {{ current_date }}</p>
         <p><strong>System ID:</strong> {{ system_id }}</p>
         <p><strong>Private IP:</strong> {{ private_ip }}</p>
     </div>
-
 </body>
 </html>
 '''
-    return render_template_string(html_content, 
+    return render_template_string(html_content,
                                current_date=current_date,
                                system_id=system_id,
                                private_ip=private_ip)
@@ -132,45 +128,100 @@ def careers():
     if request.method == 'POST':
         # Handle form submission
         name = request.form.get('name')
-        phone = request.form.get('phone')
-        experience = request.form.get('experience')
-        position = request.form.get('position')
-        ctc = request.form.get('ctc')
-        expected_ctc = request.form.get('expected_ctc')
-        
+        filename = None
+
         # Handle file upload
         if 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                # Save the file with a unique name
-                filename = f"{name.replace(' ', '_')}_resume_{datetime.now().strftime('%Y%m%d%H%M%S')}{os.path.splitext(file.filename)[1]}"
+                # Get file extension from original filename
+                file_ext = os.path.splitext(file.filename)[1].lower()
+                # Create filename using the entered name and original extension
+                base_filename = f"{name.replace(' ', '_')}{file_ext}"
+                # Secure the filename
+                filename = secure_filename(base_filename)
+                # Save the file
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
-        # In a real app, you would save this data to a database
-        print(f"New application received from {name} for {position} position")
-        
+                print(f"File saved as: {filename}")
+
         # Show confirmation page
-        return f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Application Submitted</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
-                h1 {{ color: #4CAF50; }}
-                a {{ color: #4CAF50; text-decoration: none; }}
-                a:hover {{ text-decoration: underline; }}
-            </style>
-        </head>
-        <body>
-            <h1>Application Submitted Successfully!</h1>
-            <p>Thank you for your application, {name}.</p>
-            <p>We have received your application for the {position} position.</p>
-            <a href="/">Return to Home Page</a>
-        </body>
-        </html>
+        confirmation_html = f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application Submitted</title>
+    <style>
+        body {{ 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }}
+        .confirmation-container {{
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }}
+        h1 {{ 
+            color: #4CAF50; 
+            margin-bottom: 20px;
+        }}
+        .file-info {{
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+        }}
+        a {{ 
+            color: #4CAF50; 
+            text-decoration: none;
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 20px;
+            border: 1px solid #4CAF50;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }}
+        a:hover {{
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+        }}
+    </style>
+</head>
+<body>
+    <div class="confirmation-container">
+        <h1>Application Submitted Successfully!</h1>
+        <p>Thank you for your application, <strong>{name}</strong>.</p>
         '''
-    
+        
+        if filename:
+            confirmation_html += f'''
+        <p>We have received your resume:</p>
+        <div class="file-info">{filename}</div>
+        '''
+        else:
+            confirmation_html += '''
+        <p>We have received your application.</p>
+        '''
+            
+        confirmation_html += '''
+        <a href="/">Return to Home Page</a>
+    </div>
+</body>
+</html>
+        '''
+        return confirmation_html
+
     # For GET requests, show the careers page
     careers_html = '''
 <!DOCTYPE html>
@@ -178,52 +229,67 @@ def careers():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Careers - Thinknyx Technologies</title>
+    <title>Careers - Polypop Nigeria Limited</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
             background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
         h1 {
             color: #4CAF50;
+            margin-bottom: 20px;
         }
         .upload-form {
-            margin-top: 30px;
             background-color: #fff;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            display: inline-block;
             width: 100%;
             max-width: 600px;
-            text-align: left;
+            text-align: center;
         }
         .form-group {
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
         }
         .form-group label {
             font-size: 14px;
             font-weight: bold;
-            width: 200px;
-            text-align: right;
-            margin-right: 20px;
+            display: block;
+            margin-bottom: 8px;
         }
         .form-group input {
             width: 100%;
+            max-width: 400px;
             padding: 10px;
             font-size: 14px;
             border-radius: 5px;
             border: 1px solid #ddd;
             box-sizing: border-box;
+            margin: 0 auto;
         }
         .form-group input[type="file"] {
             border: none;
             padding: 5px;
+            margin: 0 auto;
+            display: block;
+        }
+        .file-info {
+            font-size: 14px;
+            color: #777;
+            margin-top: 5px;
         }
         button {
             background-color: #4CAF50;
@@ -234,93 +300,69 @@ def careers():
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
+            max-width: 400px;
             box-sizing: border-box;
+            margin: 0 auto;
+            display: block;
         }
         button:hover {
             background-color: #45a049;
         }
         footer {
-            margin-top: 50px;
+            text-align: center;
+            padding: 20px;
             font-size: 14px;
             color: #777;
+            width: 100%;
         }
-        .section-title {
-            font-size: 20px;
-            color: #4CAF50;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .nav-link {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 16px;
-            color: #4CAF50;
-            text-decoration: none;
-        }
-        .nav-link:hover {
-            text-decoration: underline;
+        .requirements {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <!-- Add link back to home -->
-    <a href="/" class="nav-link">Home</a>
+    <div class="container">
+        <div class="upload-form">
+            <h1>Careers at Polypop Nigeria Limited</h1>
+            <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
 
-    <h1>Careers at Thinknyx Technologies</h1>
-    <p>We are always looking for talented individuals to join our team! Please fill in your details and upload your resume below:</p>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="name">Your Full Name:</label>
+                    <input type="text" name="name" id="name" required>
+                </div>
 
-    <!-- File Upload Form -->
-    <form method="POST" enctype="multipart/form-data" class="upload-form">
+                <div class="form-group">
+                    <label for="file">Upload Your Resume:</label>
+                    <input type="file" name="file" id="file" required accept=".pdf,.doc,.docx">
+                    <p class="file-info" id="file-info">No file chosen</p>
+                    <p class="requirements">Accepted formats: PDF, DOC, DOCX</p>
+                </div>
 
-        <!-- Personal Information Section -->
-        <div class="section-title">Personal Information</div>
-        <div class="form-group">
-            <label for="name">Your Name:</label>
-            <input type="text" name="name" id="name" required>
+                <button type="submit">Submit Application</button>
+            </form>
         </div>
-
-        <div class="form-group">
-            <label for="phone">Phone Number:</label>
-            <input type="tel" name="phone" id="phone" required placeholder="Enter your phone number">
-        </div>
-
-        <!-- Professional Information Section -->
-        <div class="section-title">Professional Information</div>
-        <div class="form-group">
-            <label for="experience">Year of Experience:</label>
-            <input type="number" name="experience" id="experience" required>
-        </div>
-
-        <div class="form-group">
-            <label for="position">Position Applying For:</label>
-            <input type="text" name="position" id="position" required>
-        </div>
-
-        <div class="form-group">
-            <label for="ctc">Current CTC:</label>
-            <input type="number" name="ctc" id="ctc" required placeholder="Enter your current CTC">
-        </div>
-
-        <div class="form-group">
-            <label for="expected_ctc">Expected CTC:</label>
-            <input type="number" name="expected_ctc" id="expected_ctc" required placeholder="Enter your expected CTC">
-        </div>
-
-        <!-- File Upload Section -->
-        <div class="section-title">Upload Your Resume</div>
-        <div class="form-group">
-            <label for="file">Choose a file to upload:</label>
-            <input type="file" name="file" id="file" required>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit">Submit Application</button>
-    </form>
+    </div>
 
     <footer>
-        <p>From Thinknyx Technologies</p>
+        <p>From Polypop Nigeria Limited</p>
     </footer>
+
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileInfo = document.getElementById('file-info');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const fileName = fileInput.files[0].name;
+                fileInfo.textContent = `Selected file: ${fileName}`;
+            } else {
+                fileInfo.textContent = 'No file chosen';
+            }
+        });
+    </script>
 </body>
 </html>
 '''
