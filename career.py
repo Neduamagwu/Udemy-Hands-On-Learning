@@ -20,11 +20,6 @@ def careers():
     if request.method == 'POST':
         # Get the user inputs from the form
         user_name = request.form.get('name')
-        user_experience = request.form.get('experience')
-        user_position = request.form.get('position')
-        user_ctc = request.form.get('ctc')
-        user_phone_number = request.form.get('phone')
-        user_expected_ctc = request.form.get('expected_ctc')
 
         # Handle file upload
         if 'file' not in request.files:
@@ -49,13 +44,13 @@ def careers():
             # Upload file to S3 within the folder structure
             s3_client.upload_fileobj(file, S3_BUCKET_NAME, s3_folder)
 
-            # Return success message 
-            return f"file '{filename}' uploaded successfully to s3 folder '{current_date}'"
-        
+            # Return success message
+            return f"File '{file_name}' uploaded successfully to S3 folder '{current_date}'"
+
         except NoCredentialsError:
             return "Credentials not available", 400
         except Exception as e:
-            return f"An error occured: {str(e)}", 500
+            return f"An error occurred: {str(e)}", 500
         
-            # Render the career page template 
+        # Render the careers page template
         return render_template('careers.html')
