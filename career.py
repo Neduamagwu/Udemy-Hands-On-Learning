@@ -20,11 +20,6 @@ def careers():
     if request.method == 'POST':
         # Get the user inputs from the form
         user_name = request.form.get('name')
-        user_experience = request.form.get('experience')
-        user_position = request.form.get('position')
-        user_ctc = request.form.get('ctc')
-        user_phone_number = request.form.get('phone')
-        user_expected_ctc = request.form.get('expected_ctc')
 
         # Handle file upload
         if 'file' not in request.files:
@@ -46,23 +41,15 @@ def careers():
         s3_folder = f"{current_date}/{file_name}"
 
         try:
-            # Debugging - Check if we are hitting this point
-            print(f"Attempting to upload file to: {s3_folder} in bucket: {S3_BUCKET_NAME}")
-            
             # Upload file to S3 within the folder structure
             s3_client.upload_fileobj(file, S3_BUCKET_NAME, s3_folder)
-            
-            # Debugging - Check if the upload succeeded
-            print(f"File uploaded successfully: {s3_folder}")
 
             # Return success message
             return f"File '{file_name}' uploaded successfully to S3 folder '{current_date}'"
 
         except NoCredentialsError:
-            print("Error: Credentials not available")
             return "Credentials not available", 400
         except Exception as e:
-            print(f"Error: {str(e)}")
             return f"An error occurred: {str(e)}", 500
         
         # Render the careers page template
